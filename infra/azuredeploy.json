@@ -6,7 +6,9 @@
       "type": "string",
       "minLength": 3,
       "maxLength": 12,
-      "metadata": { "description": "모든 리소스 이름 앞에 붙는 접두사 (소문자, 숫자)" }
+      "metadata": {
+        "description": "모든 리소스 이름 앞에 붙는 접두사 (소문자, 숫자)"
+      }
     },
     "location": {
       "type": "string",
@@ -15,18 +17,50 @@
     "vmSize": {
       "type": "string",
       "defaultValue": "Standard_B2s_v2",
-      "allowedValues": [ "Standard_B2s_v2", "Standard_B2as_v2", "Standard_D2s_v5" ]
+      "allowedValues": [
+        "Standard_B2s_v2",
+        "Standard_B2as_v2",
+        "Standard_D2s_v5"
+      ]
     },
     "appServiceSku": {
       "type": "string",
       "defaultValue": "B1",
-      "allowedValues": [ "B1", "S1", "P0v3" ]
+      "allowedValues": [
+        "B1",
+        "S1",
+        "P0v3"
+      ]
+    },
+    "osImage": {
+      "type": "string",
+      "defaultValue": "ubuntu-2204",
+      "allowedValues": [
+        "ubuntu-2204",
+        "windows-server-2022",
+        "windows-11-25h2-pro",
+        "windows-11-25h2-ent"
+      ],
+      "metadata": {
+        "description": "Linux 이미지는 SSH 키, Windows 이미지는 관리자 비밀번호로 접속합니다."
+      }
     },
     "adminUsername": {
       "type": "string"
     },
     "sshPublicKey": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "osType이 Linux일 때만 사용"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "osType이 Windows일 때만 사용"
+      }
     },
     "dbAdminLogin": {
       "type": "string"
@@ -49,7 +83,66 @@
     "webAppName": "[format('{0}-web-{1}', parameters('prefix'), variables('suffix'))]",
     "vmSubnetName": "snet-vm",
     "appSubnetName": "snet-app",
-    "dbSubnetName": "snet-db"
+    "dbSubnetName": "snet-db",
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+            "keyData": "[parameters('sshPublicKey')]"
+          }
+        ]
+      }
+    },
+    "windowsConfiguration": {
+      "provisionVMAgent": true,
+      "enableAutomaticUpdates": true
+    },
+    "osImages": {
+      "ubuntu-2204": {
+        "os": "Linux",
+        "licenseType": "",
+        "image": {
+          "publisher": "Canonical",
+          "offer": "0001-com-ubuntu-server-jammy",
+          "sku": "22_04-lts-gen2",
+          "version": "latest"
+        }
+      },
+      "windows-server-2022": {
+        "os": "Windows",
+        "licenseType": "",
+        "image": {
+          "publisher": "MicrosoftWindowsServer",
+          "offer": "WindowsServer",
+          "sku": "2022-datacenter-azure-edition",
+          "version": "latest"
+        }
+      },
+      "windows-11-25h2-pro": {
+        "os": "Windows",
+        "licenseType": "Windows_Client",
+        "image": {
+          "publisher": "MicrosoftWindowsDesktop",
+          "offer": "windows-11",
+          "sku": "win11-25h2-pro",
+          "version": "latest"
+        }
+      },
+      "windows-11-25h2-ent": {
+        "os": "Windows",
+        "licenseType": "Windows_Client",
+        "image": {
+          "publisher": "MicrosoftWindowsDesktop",
+          "offer": "windows-11",
+          "sku": "win11-25h2-ent",
+          "version": "latest"
+        }
+      }
+    },
+    "selectedOs": "[variables('osImages')[parameters('osImage')]]",
+    "isWindows": "[equals(variables('selectedOs').os, 'Windows')]"
   },
   "resources": [
     {
@@ -71,7 +164,9 @@
       ],
       "properties": {
         "addressSpace": {
-          "addressPrefixes": [ "10.20.0.0/16" ]
+          "addressPrefixes": [
+            "10.20.0.0/16"
+          ]
         },
         "subnets": [
           {
@@ -90,7 +185,9 @@
               "delegations": [
                 {
                   "name": "webapp",
-                  "properties": { "serviceName": "Microsoft.Web/serverFarms" }
+                  "properties": {
+                    "serviceName": "Microsoft.Web/serverFarms"
+                  }
                 }
               ]
             }
@@ -102,7 +199,9 @@
               "delegations": [
                 {
                   "name": "postgres",
-                  "properties": { "serviceName": "Microsoft.DBforPostgreSQL/flexibleServers" }
+                  "properties": {
+                    "serviceName": "Microsoft.DBforPostgreSQL/flexibleServers"
+                  }
                 }
               ]
             }
@@ -166,42 +265,41 @@
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
         },
+        "securityProfile": {
+          "securityType": "TrustedLaunch",
+          "uefiSettings": {
+            "secureBootEnabled": true,
+            "vTpmEnabled": true
+          }
+        },
         "osProfile": {
           "computerName": "[variables('vmName')]",
           "adminUsername": "[parameters('adminUsername')]",
-          "linuxConfiguration": {
-            "disablePasswordAuthentication": true,
-            "ssh": {
-              "publicKeys": [
-                {
-                  "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
-                  "keyData": "[parameters('sshPublicKey')]"
-                }
-              ]
-            }
-          }
+          "adminPassword": "[if(variables('isWindows'), parameters('adminPassword'), null())]",
+          "linuxConfiguration": "[if(variables('isWindows'), null(), variables('linuxConfiguration'))]",
+          "windowsConfiguration": "[if(variables('isWindows'), variables('windowsConfiguration'), null())]"
         },
         "storageProfile": {
-          "imageReference": {
-            "publisher": "Canonical",
-            "offer": "0001-com-ubuntu-server-jammy",
-            "sku": "22_04-lts-gen2",
-            "version": "latest"
-          },
+          "imageReference": "[variables('selectedOs').image]",
           "osDisk": {
             "createOption": "FromImage",
             "deleteOption": "Delete",
-            "managedDisk": { "storageAccountType": "StandardSSD_LRS" }
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            }
           }
         },
         "networkProfile": {
           "networkInterfaces": [
             {
               "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
-              "properties": { "deleteOption": "Delete" }
+              "properties": {
+                "deleteOption": "Delete"
+              }
             }
           ]
-        }
+        },
+        "licenseType": "[if(empty(variables('selectedOs').licenseType), null(), variables('selectedOs').licenseType)]"
       }
     },
     {
@@ -221,12 +319,16 @@
         "version": "16",
         "administratorLogin": "[parameters('dbAdminLogin')]",
         "administratorLoginPassword": "[parameters('dbAdminPassword')]",
-        "storage": { "storageSizeGB": 32 },
+        "storage": {
+          "storageSizeGB": 32
+        },
         "backup": {
           "backupRetentionDays": 7,
           "geoRedundantBackup": "Disabled"
         },
-        "highAvailability": { "mode": "Disabled" },
+        "highAvailability": {
+          "mode": "Disabled"
+        },
         "network": {
           "delegatedSubnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('dbSubnetName'))]",
           "privateDnsZoneArmResourceId": "[resourceId('Microsoft.Network/privateDnsZones', variables('pgDnsZoneName'))]"
@@ -283,11 +385,26 @@
               "name": "DB_HOST",
               "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName')), '2024-08-01').fullyQualifiedDomainName]"
             },
-            { "name": "DB_PORT", "value": "5432" },
-            { "name": "DB_NAME", "value": "[variables('dbName')]" },
-            { "name": "DB_USER", "value": "[parameters('dbAdminLogin')]" },
-            { "name": "DB_PASSWORD", "value": "[parameters('dbAdminPassword')]" },
-            { "name": "DB_SSLMODE", "value": "require" }
+            {
+              "name": "DB_PORT",
+              "value": "5432"
+            },
+            {
+              "name": "DB_NAME",
+              "value": "[variables('dbName')]"
+            },
+            {
+              "name": "DB_USER",
+              "value": "[parameters('dbAdminLogin')]"
+            },
+            {
+              "name": "DB_PASSWORD",
+              "value": "[parameters('dbAdminPassword')]"
+            },
+            {
+              "name": "DB_SSLMODE",
+              "value": "require"
+            }
           ]
         }
       }

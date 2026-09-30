@@ -4,6 +4,7 @@ import {
   AUTH_CONFIGURED,
   LOCATIONS,
   VM_SIZES,
+  OS_IMAGES,
   APP_SERVICE_SKUS,
   POLL_INTERVAL_MS,
 } from './config.js';
@@ -42,8 +43,12 @@ const fields = {
   prefix: $('prefix'),
   vmSize: $('vm-size'),
   appServiceSku: $('app-sku'),
+  osImage: $('os-image'),
   adminUsername: $('admin-username'),
   sshPublicKey: $('ssh-key'),
+  vmPassword: $('vm-password'),
+  vmPasswordConfirm: $('vm-password-confirm'),
+  winLicense: $('win-license'),
   dbAdminLogin: $('db-login'),
   dbAdminPassword: $('db-password'),
   dbAdminPasswordConfirm: $('db-password-confirm'),
@@ -223,8 +228,12 @@ function readForm() {
     prefix: fields.prefix.value.trim(),
     vmSize: fields.vmSize.value,
     appServiceSku: fields.appServiceSku.value,
+    osImage: fields.osImage.value,
     adminUsername: fields.adminUsername.value.trim(),
     sshPublicKey: fields.sshPublicKey.value.trim().replace(/\s+/g, ' '),
+    vmPassword: fields.vmPassword.value,
+    vmPasswordConfirm: fields.vmPasswordConfirm.value,
+    winLicense: fields.winLicense.checked,
     dbAdminLogin: fields.dbAdminLogin.value.trim(),
     dbAdminPassword: fields.dbAdminPassword.value,
     dbAdminPasswordConfirm: fields.dbAdminPasswordConfirm.value,
@@ -250,13 +259,39 @@ function validate(v) {
     errors.prefix = '소문자로 시작하는 소문자·숫자 3~12자로 입력하세요.';
   }
 
-  if (!/^[a-z_][a-z0-9_-]{0,31}$/.test(v.adminUsername)) {
+  const image = findImage(v.osImage);
+  const isWindows = image?.family === 'Windows';
+
+  if (!image) errors.osImage = '운영체제를 선택하세요.';
+
+  if (image?.client && !v.winLicense) {
+    errors.winLicense = 'Windows 11 가상 머신은 적합한 라이선스가 있어야 만들 수 있습니다.';
+  }
+
+  if (isWindows) {
+    if (!/^[A-Za-z0-9._-]{1,20}$/.test(v.adminUsername) || v.adminUsername.endsWith('.')) {
+      errors.adminUsername = '20자 이내의 영문·숫자·밑줄·하이픈·마침표로 입력하세요. 마침표로 끝날 수 없습니다.';
+    }
+  } else if (!/^[a-z_][a-z0-9_-]{0,31}$/.test(v.adminUsername)) {
     errors.adminUsername = '소문자 또는 밑줄로 시작하는 32자 이내의 소문자·숫자·밑줄·하이픈으로 입력하세요.';
-  } else if (RESERVED_VM_USERS.has(v.adminUsername)) {
+  }
+  if (!errors.adminUsername && RESERVED_VM_USERS.has(v.adminUsername.toLowerCase())) {
     errors.adminUsername = `'${v.adminUsername}'은(는) Azure에서 쓸 수 없는 이름입니다.`;
   }
 
-  if (!/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/=]{40,}( .*)?$/.test(v.sshPublicKey)) {
+  if (isWindows) {
+    const vmPw = v.vmPassword;
+    if (vmPw.length < 12 || vmPw.length > 123) {
+      errors.vmPassword = '12자 이상 123자 이하로 입력하세요.';
+    } else if (passwordCategories(vmPw) < 3) {
+      errors.vmPassword = '대문자, 소문자, 숫자, 기호 중 3종류 이상을 섞어 주세요.';
+    } else if (v.adminUsername && vmPw.toLowerCase().includes(v.adminUsername.toLowerCase())) {
+      errors.vmPassword = '비밀번호에 관리자 사용자 이름을 넣을 수 없습니다.';
+    }
+    if (v.vmPasswordConfirm !== vmPw) {
+      errors.vmPasswordConfirm = '비밀번호가 일치하지 않습니다.';
+    }
+  } else if (!/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/=]{40,}( .*)?$/.test(v.sshPublicKey)) {
     errors.sshPublicKey = 'ssh-ed25519 또는 ssh-rsa 로 시작하는 공개 키 한 줄을 붙여 넣으세요. 개인 키는 넣지 마세요.';
   }
 
@@ -422,6 +457,8 @@ async function watchDeployment(subscriptionId, resourceGroup, name, startedAt) {
 }
 
 function clearPasswords() {
+  fields.vmPassword.value = '';
+  fields.vmPasswordConfirm.value = '';
   fields.dbAdminPassword.value = '';
   fields.dbAdminPasswordConfirm.value = '';
 }
@@ -462,13 +499,17 @@ async function handleSubmit(event) {
 
     step = 'deployment';
     const name = deploymentName(request.prefix);
+    const family = findImage(request.osImage).family;
     const parameters = toArmParameters({
       prefix: request.prefix,
       location: request.location,
       vmSize: request.vmSize,
       appServiceSku: request.appServiceSku,
+      osImage: request.osImage,
       adminUsername: request.adminUsername,
-      sshPublicKey: request.sshPublicKey,
+      // 선택하지 않은 접속 방식의 값은 보내지 않습니다.
+      sshPublicKey: family === 'Linux' ? request.sshPublicKey : '',
+      adminPassword: family === 'Windows' ? request.vmPassword : '',
       dbAdminLogin: request.dbAdminLogin,
       dbAdminPassword: request.dbAdminPassword,
     });
@@ -490,12 +531,33 @@ async function handleSubmit(event) {
   }
 }
 
+// ---------- 운영체제 선택 ----------
+
+function findImage(value) {
+  return OS_IMAGES.find((image) => image.value === value);
+}
+
+// 선택한 이미지에 필요한 접속 정보 칸만 보여줍니다.
+// data-os="Linux" / "Windows" 는 접속 방식, "WindowsClient" 는 Windows 11 라이선스 확인입니다.
+function applyOsImage() {
+  const image = findImage(fields.osImage.value);
+  for (const el of document.querySelectorAll('[data-os]')) {
+    const target = el.dataset.os;
+    el.hidden = target === 'WindowsClient' ? !image?.client : target !== image?.family;
+  }
+  if (!image?.client) fields.winLicense.checked = false;
+  for (const key of ['sshPublicKey', 'vmPassword', 'vmPasswordConfirm', 'winLicense', 'adminUsername']) {
+    showFieldError(key, '');
+  }
+}
+
 // ---------- 시작 ----------
 
 function wireEvents() {
   els.signIn.addEventListener('click', () => signIn());
   els.signOut.addEventListener('click', () => signOut());
   els.form.addEventListener('submit', handleSubmit);
+  fields.osImage.addEventListener('change', applyOsImage);
 
   // 리소스 그룹 이름을 직접 바꾸기 전까지는 접두사를 따라 rg-<접두사> 로 채웁니다.
   fields.rgName.addEventListener('input', () => {
@@ -510,13 +572,16 @@ function wireEvents() {
 
   // 입력을 고치면 해당 칸의 오류 표시를 지웁니다.
   for (const [key, el] of Object.entries(fields)) {
-    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => showFieldError(key, ''));
+    const eventName = el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input';
+    el.addEventListener(eventName, () => showFieldError(key, ''));
   }
 }
 
 async function init() {
   fillSelect(fields.location, LOCATIONS);
   fillSelect(fields.vmSize, VM_SIZES);
+  fillSelect(fields.osImage, OS_IMAGES);
+  applyOsImage();
   fillSelect(fields.appServiceSku, APP_SERVICE_SKUS);
   buildResourceList();
   wireEvents();

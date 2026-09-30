@@ -42,6 +42,15 @@ export const VM_SIZES = [
   { value: 'Standard_D2s_v5', label: 'Standard_D2s_v5 (2 vCPU, 8 GiB)' },
 ];
 
+// family: 접속 방식 (Linux = SSH 키, Windows = 비밀번호)
+// client: Windows 클라이언트 이미지 여부. Azure에서 쓰려면 별도 라이선스가 필요합니다.
+export const OS_IMAGES = [
+  { value: 'ubuntu-2204', label: 'Ubuntu 22.04 LTS', family: 'Linux', client: false },
+  { value: 'windows-server-2022', label: 'Windows Server 2022 Datacenter', family: 'Windows', client: false },
+  { value: 'windows-11-25h2-pro', label: 'Windows 11 Pro 25H2', family: 'Windows', client: true },
+  { value: 'windows-11-25h2-ent', label: 'Windows 11 Enterprise 25H2', family: 'Windows', client: true },
+];
+
 export const APP_SERVICE_SKUS = [
   { value: 'B1', label: 'B1 기본' },
   { value: 'S1', label: 'S1 표준' },

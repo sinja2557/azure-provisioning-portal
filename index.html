@@ -89,19 +89,53 @@
               <legend>가상 머신 접속</legend>
               <div class="grid">
                 <div class="field full">
+                  <label for="os-image">운영체제</label>
+                  <select id="os-image" aria-describedby="os-image-help os-image-error"></select>
+                  <p id="os-image-help" class="help">
+                    Ubuntu는 SSH 키로, Windows는 비밀번호로 원격 데스크톱에 접속합니다.
+                    가상 머신에는 공인 IP가 없으니 Azure Bastion이나 같은 네트워크 안에서 접속하세요.
+                  </p>
+                  <p id="os-image-error" class="field-error"></p>
+                </div>
+                <div class="field full">
                   <label for="admin-username">관리자 사용자 이름</label>
                   <input id="admin-username" type="text" autocomplete="off" spellcheck="false"
                     aria-describedby="admin-username-error" />
                   <p id="admin-username-error" class="field-error"></p>
                 </div>
-                <div class="field full">
+
+                <div class="field full" data-os="Linux">
                   <label for="ssh-key">SSH 공개 키</label>
                   <textarea id="ssh-key" spellcheck="false" aria-describedby="ssh-key-help ssh-key-error"
                     placeholder="ssh-ed25519 AAAA… user@host"></textarea>
-                  <p id="ssh-key-help" class="help">
-                    가상 머신에는 공인 IP가 없습니다. Azure Bastion이나 같은 네트워크 안에서 접속하세요.
-                  </p>
+                  <p id="ssh-key-help" class="help">.pub 으로 끝나는 공개 키 파일의 내용을 붙여 넣으세요.</p>
                   <p id="ssh-key-error" class="field-error"></p>
+                </div>
+
+                <div class="field" data-os="Windows" hidden>
+                  <label for="vm-password">관리자 비밀번호</label>
+                  <input id="vm-password" type="password" autocomplete="new-password"
+                    aria-describedby="vm-password-help vm-password-error" />
+                  <p id="vm-password-help" class="help">12자 이상, 대문자·소문자·숫자·기호 중 3종류 이상</p>
+                  <p id="vm-password-error" class="field-error"></p>
+                </div>
+                <div class="field" data-os="Windows" hidden>
+                  <label for="vm-password-confirm">비밀번호 확인</label>
+                  <input id="vm-password-confirm" type="password" autocomplete="new-password"
+                    aria-describedby="vm-password-confirm-error" />
+                  <p id="vm-password-confirm-error" class="field-error"></p>
+                </div>
+
+                <div class="field full" data-os="WindowsClient" hidden>
+                  <label class="check" for="win-license">
+                    <input id="win-license" type="checkbox" aria-describedby="win-license-help win-license-error" />
+                    <span>Windows 11을 Azure에서 쓸 수 있는 라이선스가 있습니다</span>
+                  </label>
+                  <p id="win-license-help" class="help">
+                    Microsoft 365 E3·E5, Windows E3·E5, Windows VDA 같은 사용자별 라이선스가 필요합니다.
+                    Windows 11 이미지 요금에는 OS 라이선스가 포함되지 않습니다.
+                  </p>
+                  <p id="win-license-error" class="field-error"></p>
                 </div>
               </div>
             </fieldset>

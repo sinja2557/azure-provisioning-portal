@@ -4,7 +4,7 @@
 
 - 리소스 그룹
 - 가상 네트워크 (서브넷 3개: VM용, 웹 앱 통합용, DB용)
-- 가상 머신 (Ubuntu 22.04, 공인 IP 없음, SSH 키 로그인)
+- 가상 머신 (Ubuntu 22.04, Windows Server 2022, Windows 11 Pro·Enterprise 25H2 중 선택, 공인 IP 없음)
 - PostgreSQL 유연한 서버 + 데이터베이스 `appdb` (VNet 안에서만 접근 가능)
 - App Service 요금제 + 웹 앱 (VNet 통합, DB 접속 정보를 앱 설정으로 주입)
 
@@ -82,7 +82,18 @@ npm run dev                    # http://localhost:5173
 
 **비밀번호 처리.** DB 비밀번호는 `securestring` 파라미터라 배포 기록에는 남지 않지만, 웹 앱의 앱 설정 `DB_PASSWORD` 에는 평문으로 저장됩니다. 운영 환경에서는 Key Vault에 저장하고 웹 앱에서 Key Vault 참조를 쓰거나, PostgreSQL의 Entra ID 인증과 웹 앱 Managed Identity로 비밀번호 자체를 없애는 방향을 권장합니다. 두 방법 모두 배포 중 역할 할당이 필요해서 사용자에게 추가 권한이 필요합니다.
 
-**VM 접속.** VM에는 공인 IP가 없고 보안 그룹이 인터넷 인바운드를 막습니다. Azure Bastion을 같은 VNet에 추가하거나 VPN으로 접속하세요.
+**VM 접속.** 운영체제에 따라 접속 정보가 다릅니다.
+
+- Ubuntu: SSH 공개 키로 로그인합니다. 비밀번호 로그인은 꺼져 있습니다.
+- Windows Server, Windows 11: 관리자 비밀번호(12자 이상)로 원격 데스크톱(RDP) 접속합니다.
+
+화면에서는 선택한 운영체제에 필요한 칸만 보이고, 선택하지 않은 쪽의 값은 배포 요청에 담기지 않습니다. 두 경우 모두 VM에는 공인 IP가 없고 보안 그룹이 인터넷 인바운드를 막습니다. Azure Bastion을 같은 VNet에 추가하거나 VPN으로 접속하세요. Windows Server VM은 같은 크기의 Linux VM보다 라이선스 비용이 더 붙습니다.
+
+**Windows 11 라이선스.** Azure에서 Windows 11을 실행하려면 Microsoft 365 E3·E5, Windows E3·E5, Windows VDA 같은 사용자별 라이선스가 있어야 합니다. Windows 11 이미지 요금에는 OS 라이선스가 포함되어 있지 않고, 템플릿은 `licenseType: Windows_Client` 로 "라이선스를 보유하고 있다"고 선언합니다. 그래서 화면에서 라이선스 보유 확인에 체크해야 요청을 보낼 수 있습니다.
+
+**신뢰할 수 있는 시작.** Windows 11은 TPM이 필요해서 모든 VM에 Trusted Launch(보안 부팅, vTPM)를 켰습니다. 선택지의 이미지와 VM 크기는 모두 이를 지원합니다. 목록에 새 VM 크기를 추가할 때는 Trusted Launch 지원 여부를 확인하세요.
+
+**이미지 추가.** 다른 이미지를 쓰려면 `infra/azuredeploy.json` 의 `osImages` 변수와 `osImage` 허용값, `src/config.js` 의 `OS_IMAGES` 에 같은 키로 한 줄씩 추가하면 됩니다. 이미지 이름은 `az vm image list --publisher MicrosoftWindowsDesktop --offer windows-11 --all -o table` 로 확인할 수 있습니다.
 
 **비용.** VM, PostgreSQL, App Service 요금제는 켜져 있는 동안 계속 과금됩니다. 다 쓴 환경은 리소스 그룹을 통째로 삭제하면 모두 정리됩니다.
 
