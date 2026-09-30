@@ -1,0 +1,417 @@
+:root {
+  --fog: #eef1f4;
+  --paper: #ffffff;
+  --ink: #17212b;
+  --muted: #56657a;
+  --rule: #cdd5de;
+  --steel: #235c8e;
+  --steel-deep: #173f63;
+  --ok: #2f7a55;
+  --run: #9a6b12;
+  --run-soft: #e3c98f;
+  --fail: #a83232;
+  --fail-bg: #fbefef;
+
+  font-family: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--fog);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--steel);
+}
+
+/* 상단 바 */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px clamp(16px, 4vw, 40px);
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.brand-mark {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--steel);
+  border-radius: 3px;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-name {
+  color: var(--muted);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 본문 배치 */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: clamp(24px, 4vw, 56px);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 56px) clamp(16px, 4vw, 40px);
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  max-width: 60ch;
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+
+.notice {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  background: var(--paper);
+  border-left: 3px solid var(--steel);
+  border-radius: 0;
+}
+
+.notice-fail {
+  background: var(--fail-bg);
+  border-left-color: var(--fail);
+}
+
+/* 입력 양식 */
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.group {
+  margin-bottom: 16px;
+  padding: 20px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.group > legend {
+  float: left;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.grid {
+  clear: both;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--steel);
+  outline-offset: 1px;
+  border-color: var(--steel);
+}
+
+[aria-invalid='true'] {
+  border-color: var(--fail);
+}
+
+.form-body:disabled input,
+.form-body:disabled select,
+.form-body:disabled textarea {
+  color: var(--muted);
+  background: #f6f8fa;
+}
+
+.help {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--fail);
+}
+
+.field-error:empty {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* 버튼 */
+.btn {
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--steel);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  color: #ffffff;
+  background: var(--steel);
+}
+
+.btn-primary:hover {
+  background: var(--steel-deep);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-quiet {
+  padding: 6px 14px;
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border-color: var(--rule);
+}
+
+/* 배포 현황 */
+.status {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+}
+
+@media (max-width: 860px) {
+  .status {
+    position: static;
+  }
+}
+
+.status h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.status-summary {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.resource-group-label {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.resource-group-label:first-child {
+  margin-top: 0;
+}
+
+.resource-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  padding: 9px 12px 9px 14px;
+  font-size: 14px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--rule);
+  border-radius: 0;
+}
+
+.row .state {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.row[data-state='running'] {
+  border-left-color: var(--run);
+}
+
+.row[data-state='running'] .state {
+  color: var(--run);
+}
+
+.row[data-state='done'] {
+  border-left-color: var(--ok);
+}
+
+.row[data-state='done'] .state {
+  color: var(--ok);
+}
+
+.row[data-state='failed'] {
+  background: var(--fail-bg);
+  border-left-color: var(--fail);
+}
+
+.row[data-state='failed'] .state {
+  color: var(--fail);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .row[data-state='running'] {
+    animation: working 1.4s ease-in-out infinite;
+  }
+
+  @keyframes working {
+    50% {
+      border-left-color: var(--run-soft);
+    }
+  }
+}
+
+/* 결과 */
+.result {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.result.failed {
+  background: var(--fail-bg);
+  border-color: var(--fail);
+}
+
+.result h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.result dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.result dt {
+  color: var(--muted);
+}
+
+.result dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.result ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  word-break: break-word;
+}
